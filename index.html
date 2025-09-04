@@ -1,0 +1,103 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KNU Presale Live</title>
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.9.0/dist/ethers.min.js"></script>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="container">
+<h2>Koin Nusantara (KNU) Presale</h2>
+
+<button id="connectWallet">Connect Wallet</button>
+
+<div>
+  <p>USDT Amount:</p>
+  <input type="number" id="usdtAmount" placeholder="Enter USDT amount">
+  <button id="approveBtn" disabled>Approve USDT</button>
+  <button id="buyBtn" disabled>Buy KNU</button>
+</div>
+
+<div>
+  <p><strong>Rate:</strong> <span id="rate">-</span> KNU per USDT</p>
+  <p><strong>Your USDT Balance:</strong> <span id="usdtBalance">-</span></p>
+  <p><strong>Your KNU Balance:</strong> <span id="knuBalance">-</span></p>
+</div>
+
+<div id="status"></div>
+</div>
+
+<script>
+const knuPresaleAddress = "0x1b04c1d8f818ab5f37aea335b798e29cd8322cd1";
+const usdtAddress = "0xa608a83f940a91d194b1ef887844d807d68b5baa";
+let provider, signer, userAddress;
+
+const presaleAbi = [
+  "function buyKNU(uint256 usdtAmount) external",
+  "function rate() view returns(uint256)"
+];
+
+const erc20Abi = [
+  "function approve(address spender, uint256 amount) external returns (bool)",
+  "function allowance(address owner, address spender) view returns(uint256)",
+  "function balanceOf(address account) view returns(uint256)"
+];
+
+async function connectWallet() {
+  if (!window.ethereum) return alert("Install MetaMask or Trust Wallet!");
+  provider = new ethers.BrowserProvider(window.ethereum);
+  await provider.send("eth_requestAccounts", []);
+  signer = await provider.getSigner();
+  userAddress = await signer.getAddress();
+  document.getElementById("status").innerText = "Wallet connected: " + userAddress;
+  document.getElementById("approveBtn").disabled = false;
+  document.getElementById("buyBtn").disabled = false;
+  await updateBalances();
+  await getRate();
+}
+
+async function getRate() {
+  const presale = new ethers.Contract(knuPresaleAddress, presaleAbi, provider);
+  const rate = await presale.rate();
+  document.getElementById("rate").innerText = rate.toString();
+}
+
+async function updateBalances() {
+  const usdt = new ethers.Contract(usdtAddress, erc20Abi, provider);
+  const knu = new ethers.Contract("0xA77aDbed52f82Eb8131a6d410C7a26E8CEc1B706", erc20Abi, provider);
+  const usdtBal = await usdt.balanceOf(userAddress);
+  const knuBal = await knu.balanceOf(userAddress);
+  document.getElementById("usdtBalance").innerText = ethers.formatUnits(usdtBal, 18);
+  document.getElementById("knuBalance").innerText = ethers.formatUnits(knuBal, 18);
+}
+
+async function approveUSDT() {
+  const amount = document.getElementById("usdtAmount").value;
+  if (!amount || amount <= 0) return alert("Enter valid USDT amount");
+  const usdt = new ethers.Contract(usdtAddress, erc20Abi, signer);
+  const tx = await usdt.approve(knuPresaleAddress, ethers.parseUnits(amount, 18));
+  document.getElementById("status").innerText = "Approving USDT...";
+  await tx.wait();
+  document.getElementById("status").innerText = `Approved ${amount} USDT`;
+}
+
+async function buyKNU() {
+  const amount = document.getElementById("usdtAmount").value;
+  if (!amount || amount <= 0) return alert("Enter valid USDT amount");
+  const presale = new ethers.Contract(knuPresaleAddress, presaleAbi, signer);
+  const tx = await presale.buyKNU(ethers.parseUnits(amount, 18));
+  document.getElementById("status").innerText = "Buying KNU...";
+  await tx.wait();
+  document.getElementById("status").innerText = `Bought KNU with ${amount} USDT`;
+  await updateBalances();
+}
+
+document.getElementById("connectWallet").onclick = connectWallet;
+document.getElementById("approveBtn").onclick = approveUSDT;
+document.getElementById("buyBtn").onclick = buyKNU;
+</script>
+</body>
+</html>
