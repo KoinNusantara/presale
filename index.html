@@ -47,9 +47,13 @@ const erc20Abi = [
 ];
 
 async function connectWallet() {
-    if (!window.ethereum) return alert("Install MetaMask or Trust Wallet!");
+    // Deteksi provider dengan aman
+    const providerDetected = window.ethereum || (window.web3 && window.web3.currentProvider);
+    if (!providerDetected) {
+        return alert("Install MetaMask atau Trust Wallet terlebih dahulu!");
+    }
     try {
-        provider = new ethers.providers.Web3Provider(window.ethereum);
+        provider = new ethers.providers.Web3Provider(providerDetected);
         await provider.send("eth_requestAccounts", []);
         signer = provider.getSigner();
         userAddress = await signer.getAddress();
