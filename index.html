@@ -47,16 +47,21 @@ const erc20Abi = [
 ];
 
 async function connectWallet() {
-  if (!window.ethereum) return alert("Install MetaMask or Trust Wallet!");
-  provider = new ethers.BrowserProvider(window.ethereum);
-  await provider.send("eth_requestAccounts", []);
-  signer = await provider.getSigner();
-  userAddress = await signer.getAddress();
-  document.getElementById("status").innerText = "Wallet connected: " + userAddress;
-  document.getElementById("approveBtn").disabled = false;
-  document.getElementById("buyBtn").disabled = false;
-  await updateBalances();
-  await getRate();
+    if (!window.ethereum) return alert("Install MetaMask or Trust Wallet!");
+    try {
+        provider = new ethers.providers.Web3Provider(window.ethereum);
+        await provider.send("eth_requestAccounts", []);
+        signer = provider.getSigner();
+        userAddress = await signer.getAddress();
+        document.getElementById("status").innerText = "Wallet connected: " + userAddress;
+        document.getElementById("approveBtn").disabled = false;
+        document.getElementById("buyBtn").disabled = false;
+        await updateBalances();
+        await getRate();
+    } catch(e) {
+        console.error(e);
+        alert("Gagal connect wallet: " + e.message);
+    }
 }
 
 async function getRate() {
